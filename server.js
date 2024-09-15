@@ -6,7 +6,15 @@ const bodyParser = require("body-parser");
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://blog-1wspgshbx-somnathdudhat222gmailcoms-projects.vercel.app",
+    ],
+    methods: "GET,POST,PUT,DELETE",
+  })
+);
+
 app.use(bodyParser.json());
 
 // Connect to MySQL database using Sequelize
@@ -17,6 +25,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.DATABASE_HOST,
     dialect: "mysql",
+    dialectModule: require("mysql2"),
   }
 );
 
@@ -106,3 +115,21 @@ const port = process.env.PORT || 8081;
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
+
+module.exports = app;
+
+module.exports = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Or specify your frontend origin
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end(); // Handle preflight request
+  }
+
+  // Handle actual request...
+  res.json({ message: "Hello World" });
+};
