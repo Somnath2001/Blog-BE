@@ -1,5 +1,6 @@
+require("dotenv").config();
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
+const { Sequelize, DataTypes } = require("sequelize");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
@@ -8,62 +9,96 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const db = new sqlite3.Database("./blog.db", (err) => {
-  if (err) {
-    console.error("Failed to connect to the database:", err);
-  } else {
-    console.log("Connected to SQLite database.");
-    db.run(
-      "CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, content TEXT)"
-    );
+// Connect to MySQL database using Sequelize
+const sequelize = new Sequelize(
+  process.env.DATABASE_NAME,
+  process.env.DATABASE_USER,
+  process.env.DATABASE_PASSWORD,
+  {
+    host: process.env.DATABASE_HOST,
+    dialect: "mysql",
+  }
+);
+
+// Define the Post model
+const Post = sequelize.define(
+  "Post",
+  {
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+  },
+  {
+    timestamps: false,
+    tableName: "posts",
+  }
+);
+
+// Sync model with the database (creates table if it doesn't exist)
+sequelize
+  .sync()
+  .then(() => {
+    console.log("Connected to MySQL database and synced Post model.");
+  })
+  .catch((err) => {
+    console.error("Failed to sync database:", err);
+  });
+
+// Get all posts
+app.get("/posts", async (req, res) => {
+  try {
+    const posts = await Post.findAll();
+    res.json({ posts });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 
-app.get("/posts", (req, res) => {
-  db.all("SELECT * FROM posts", [], (err, rows) => {
-    if (err) {
-      res.status(400).json({ error: err.message });
-    } else {
-      res.json({ posts: rows });
-    }
-  });
-});
-
-app.get("/posts/:id", (req, res) => {
+// Get post by ID
+app.get("/posts/:id", async (req, res) => {
   const { id } = req.params;
-  db.get("SELECT * FROM posts WHERE id = ?", [id], (err, row) => {
-    if (err) {
-      res.status(400).json({ error: err.message });
+  try {
+    const post = await Post.findByPk(id);
+    if (post) {
+      res.json({ post });
     } else {
-      res.json({ post: row });
+      res.status(404).json({ error: "Post not found" });
     }
-  });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
-app.post("/posts", (req, res) => {
+// Create a new post
+app.post("/posts", async (req, res) => {
   const { title, content } = req.body;
-  db.run(
-    "INSERT INTO posts (title, content) VALUES (?, ?)",
-    [title, content],
-    function (err) {
-      if (err) {
-        res.status(400).json({ error: err.message });
-      } else {
-        res.json({ id: this.lastID, title, content });
-      }
-    }
-  );
+  try {
+    const newPost = await Post.create({ title, content });
+    res.json(newPost);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
-app.delete("/posts/:id", (req, res) => {
+// Delete a post by ID
+app.delete("/posts/:id", async (req, res) => {
   const { id } = req.params;
-  db.run("DELETE FROM posts WHERE id = ?", [id], function (err) {
-    if (err) {
-      res.status(400).json({ error: err.message });
-    } else {
+  try {
+    const post = await Post.findByPk(id);
+    if (post) {
+      await post.destroy();
       res.json({ message: "Post deleted successfully" });
+    } else {
+      res.status(404).json({ error: "Post not found" });
     }
-  });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 const port = process.env.PORT || 8081;
