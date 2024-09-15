@@ -8,9 +8,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: [
-      "https://blog-1wspgshbx-somnathdudhat222gmailcoms-projects.vercel.app",
-    ],
+    origin: ["https://blog-one-bice-30.vercel.app"],
     methods: "GET,POST,PUT,DELETE",
   })
 );
@@ -117,19 +115,3 @@ app.listen(port, () => {
 });
 
 module.exports = app;
-
-module.exports = (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Or specify your frontend origin
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
-  );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end(); // Handle preflight request
-  }
-
-  // Handle actual request...
-  res.json({ message: "Hello World !!!" });
-};
